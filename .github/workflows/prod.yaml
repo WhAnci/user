@@ -4,7 +4,7 @@ on:
     branches:
       - prod
     tags:
-      - '*'
+      - '.*'
 
   workflow_dispatch:
 
