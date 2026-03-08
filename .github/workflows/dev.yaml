@@ -6,6 +6,10 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: write # 리포지토리 내용 수정 권한
+  id-token: write
+
 jobs:
   build:
     runs-on: self-hosted
@@ -17,6 +21,7 @@ jobs:
       id: date
       run: echo "date=$(date +'%Y-%m-%d-%H-%M-%S')" >> "$GITHUB_OUTPUT"
     - run: echo ${{ steps.date.outputs.date }}
+
     
       
     - name: CI-pre_build # 
@@ -35,11 +40,12 @@ jobs:
         
     - name: clone
       run: |
-        git clone -b dev https://github.com/whanci/user.git
+        git checkout dev
     - name: update k8s deployment image
       run: |
-        cd user
         sed -i "s|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:.*|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }}|g" deploy.yaml
         git add deploy.yaml
         git commit -m "Update deployment image to ${{ steps.date.outputs.date }}"
-        git push https://whanci:${{ secrets.PAT }}@github.com/whanci/user.git dev
+        git push origin dev
+      env: # 환경 변수
+          PAT: ${{ secrets.PAT }}
