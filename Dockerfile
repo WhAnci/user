@@ -1,7 +1,6 @@
 FROM public.ecr.aws/docker/library/golang:alpine AS builder
 
 WORKDIR /build
-
 COPY main.go ./
 
 RUN go mod init prod
