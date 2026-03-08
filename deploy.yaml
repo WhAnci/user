@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-deploy
+  namespace: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: prod
+  template:
+    metadata:
+      labels:
+        app: prod
+    spec:
+      containers:
+        - name: user-container
+          image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:latest
