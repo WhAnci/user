@@ -16,6 +16,9 @@ jobs:
     
 
     steps:
+    - name: Setup AWS
+      uses: ItsKarma/aws-cli@v1.70.0
+    
     - uses: actions/checkout@v4
     - name: Get current date
       id: date
