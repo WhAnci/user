@@ -41,4 +41,4 @@ jobs:
         sed -i "s|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:.*|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }}|g" deploy.yaml
         git add deploy.yaml
         git commit -m "Update deployment image to ${{ steps.date.outputs.date }}"
-        git push origin branch-2
+        git push origin dev
