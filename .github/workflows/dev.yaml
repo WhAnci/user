@@ -64,5 +64,5 @@ jobs:
 
     - name: Trigger Argo CD sync
       run: |
-        argocd login argocd-server.argocd.svc.cluster.local --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure --grpc-web --plaintext
+        argocd login http://argocd-server.argocd.svc.cluster.local --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure --grpc-web --plaintext
         argocd app sync dev-user
