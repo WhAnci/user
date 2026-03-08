@@ -1,0 +1,47 @@
+name: Github Actions CI-CD
+on:
+  push:
+    branches:
+      - prod
+    tags:
+      - "*"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+    
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Get current date
+      id: date
+      run: echo "date=$(date +'%Y-%m-%d-%H-%M-%S')" >> "$GITHUB_OUTPUT"
+    - run: echo ${{ steps.date.outputs.date }}
+    
+      
+    - name: CI-pre_build # 
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions"
+        aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com 
+    - name: CI-build
+  
+      run: |
+        docker build -t 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }} .
+    
+    - name: CI-post_build
+      run: |
+        docker push 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }}
+        
+    - name: clone
+      run: |
+        git clone -b prod https://github.com/whanci/user.git
+    - name: update k8s deployment image
+      run: |
+        cd user
+        sed -i "s|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:.*|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }}|g" deploy.yaml
+        git add deploy.yaml
+        git commit -m "Update deployment image to ${{ steps.date.outputs.date }}"
+        git push https://whanci:${{ secrets.PAT }}@github.com/whanci/user.git prod
