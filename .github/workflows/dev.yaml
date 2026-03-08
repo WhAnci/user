@@ -18,10 +18,6 @@ jobs:
       run: echo "date=$(date +'%Y-%m-%d-%H-%M-%S')" >> "$GITHUB_OUTPUT"
     - run: echo ${{ steps.date.outputs.date }}
 
-    - name: Checkout code
-    uses: actions/checkout@v4
-    with:
-      token: ${{ secrets.PAT }}
     
       
     - name: CI-pre_build # 
@@ -47,3 +43,5 @@ jobs:
         git add deploy.yaml
         git commit -m "Update deployment image to ${{ steps.date.outputs.date }}"
         git push origin dev
+      env: # 환경 변수
+          PAT: ${{ secrets.PAT }}
