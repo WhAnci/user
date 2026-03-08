@@ -60,6 +60,7 @@ jobs:
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
         git add deploy.yaml
+        git add go.sum
         git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commits"
         git push
       env:
