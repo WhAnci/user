@@ -15,4 +15,4 @@ spec:
     spec:
       containers:
         - name: user-container
-          image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:5673924
+          image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:7de6506
