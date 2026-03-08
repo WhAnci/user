@@ -5,19 +5,26 @@ on:
       - dev
 
   workflow_dispatch:
-
 permissions:
-  contents: write # 리포지토리 내용 수정 권한
+  contents: write
   id-token: write
+env:
+  AWS_ACCOUNT_ID: 586639730662
+  AWS_REGION: ap-northeast-2
 
 jobs:
   build:
     runs-on: arc-runner-set
-    
+
 
     steps:
-    - name: Setup AWS
-      uses: ItsKarma/aws-cli@v1.70.0
+    - name: Log in to AWS ECR
+      uses: aws-actions/amazon-ecr-login@v2
+      env:
+        AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ env.AWS_REGION }}
     
     - uses: actions/checkout@v4
     - name: Get current date
