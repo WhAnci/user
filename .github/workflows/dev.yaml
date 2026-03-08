@@ -17,6 +17,11 @@ jobs:
       id: date
       run: echo "date=$(date +'%Y-%m-%d-%H-%M-%S')" >> "$GITHUB_OUTPUT"
     - run: echo ${{ steps.date.outputs.date }}
+
+    - name: Checkout code
+    uses: actions/checkout@v4
+    with:
+      token: ${{ secrets.PAT }}
     
       
     - name: CI-pre_build # 
