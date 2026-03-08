@@ -6,6 +6,10 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: write # 리포지토리 내용 수정 권한
+  id-token: write
+
 jobs:
   build:
     runs-on: self-hosted
