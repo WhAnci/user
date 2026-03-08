@@ -16,9 +16,6 @@ jobs:
     runs-on: arc-runner-set
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-
     - name: Log in to AWS ECR
       uses: aws-actions/amazon-ecr-login@v2
       env:
@@ -27,46 +24,44 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ${{ env.AWS_REGION }}
 
+
     - name: Set IMAGE_TAG
-      id: tag
       run: |
         echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
         echo "IMAGE_URL=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${GITHUB_SHA::7}" >> $GITHUB_ENV
-      
+    
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
         tags: ${{ env.IMAGE_URL }}
-        
-    - name: checkout
+
+    - name: Update dev/deploy.yaml with new image
       run: |
-        git checkout dev
-    - name: update k8s deployment image
-      run: |
-        sed -i "s|image: .*|image: ${{ env.IMAGE_URL }}|g" deploy.yaml
+        IMAGE_TAG=${GITHUB_SHA::7}
+        sed -i "s|image: .*|image: $IMAGE_URL|g" dev/deploy.yaml
       env:
         AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         IMAGE_URL: ${{ env.IMAGE_URL }}
 
-      - name: Commit updated deploy.yaml
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add dev/deploy.yaml
-          git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commits"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-          
-      - name: Install Argo CD CLI
-        run: |
-          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          chmod +x argocd
-          sudo mv argocd /usr/local/bin/
+    - name: Commit updated deploy.yaml
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git add dev/deploy.yaml
+        git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commits"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}
+        
+    - name: Install Argo CD CLI
+      run: |
+        curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+        chmod +x argocd
+        sudo mv argocd /usr/local/bin/
 
-      - name: Trigger Argo CD sync
-        run: |
-          argocd login argo-cd-argocd-server.default --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure --grpc-web --plaintext
-          argocd app sync dev-user
+    - name: Trigger Argo CD sync
+      run: |
+        argocd login argo-cd-argocd-server.default --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure --grpc-web --plaintext
+        argocd app sync dev-user
