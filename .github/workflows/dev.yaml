@@ -50,12 +50,23 @@ jobs:
         AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         IMAGE_URL: ${{ env.IMAGE_URL }}
 
-    - name: Commit updated deploy.yaml
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        git add deploy.yaml
-        git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commits"
-        git push origin dev
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT }}
+      - name: Commit updated deploy.yaml
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add dev/deploy.yaml
+          git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commits"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          
+      - name: Install Argo CD CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/
+
+      - name: Trigger Argo CD sync
+        run: |
+          argocd login argo-cd-argocd-server.default --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure --grpc-web --plaintext
+          argocd app sync dev-user
