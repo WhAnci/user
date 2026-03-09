@@ -19,7 +19,7 @@ jobs:
     
     - name: Build Go binary
       run: |
-        GOMAXPROCS=$(nproc) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main ./main.go
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main ./main.go
 
     - name: Log in to AWS ECR
       uses: aws-actions/amazon-ecr-login@v2
