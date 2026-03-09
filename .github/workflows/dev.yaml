@@ -16,6 +16,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       name: Get current date
+    - name: Cache Go build
+      uses: actions/cache@v4
+      with:
+        path: | ~/.cache/go-build ~/go/pkg/mod
+        key: ${{ runner.os }}-go-build
+        restore-keys: |
+          ${{ runner.os }}-go-build
     
     - name: Build Go binary
       run: |
@@ -41,8 +48,6 @@ jobs:
         context: .
         push: true
         tags: ${{ env.IMAGE_URL }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
 
     - name: Update deploy.yaml with new image
       run: |
