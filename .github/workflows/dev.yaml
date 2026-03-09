@@ -16,20 +16,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       name: Get current date
-
-    - name: Cache Go build
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
     
     - name: Build Go binary
       run: |
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main ./main.go
+        GOMAXPROCS=$(nproc) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main ./main.go
 
     - name: Log in to AWS ECR
       uses: aws-actions/amazon-ecr-login@v2
@@ -51,6 +41,8 @@ jobs:
         context: .
         push: true
         tags: ${{ env.IMAGE_URL }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
     - name: Update deploy.yaml with new image
       run: |
