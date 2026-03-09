@@ -1,51 +1,74 @@
 name: Github Actions CI-CD
 on:
   push:
-    branches:
-      - dev
-
-  workflow_dispatch:
-
-permissions:
-  contents: write # 리포지토리 내용 수정 권한
-  id-token: write
+    tags:
+      - '*'
+env:
+  AWS_ACCOUNT_ID: 586639730662
+  ECR_REPOSITORY: user
+  AWS_REGION: ap-northeast-2
 
 jobs:
-  build:
+  build-and-deploy:
+    if: startsWith(github.ref, 'refs/tags/') && github.ref_name != '' && github.ref_name != 'refs/heads/prod'
+    permissions: write-all
     runs-on: arc-runner-set
-    
 
     steps:
     - uses: actions/checkout@v4
-    - name: Get current date
-      id: date
-      run: echo "date=$(date +'%Y-%m-%d-%H-%M-%S')" >> "$GITHUB_OUTPUT"
-    - run: echo ${{ steps.date.outputs.date }}
-
+      name: Get current date
+    - name: Cache Go build
+      uses: actions/cache@v4
+      with:
+        path: | ~/.cache/go-build ~/go/pkg/mod
+        key: ${{ runner.os }}-go-build
+        restore-keys: |
+          ${{ runner.os }}-go-build
     
-      
-    - name: CI-pre_build # 
+    - name: Build Go binary
+      run: |
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main ./main.go
+
+    - name: Log in to AWS ECR
+      uses: aws-actions/amazon-ecr-login@v2
+      env:
+        AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+
+
+    - name: Set IMAGE_TAG
+      run: |
+        echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+        echo "IMAGE_URL=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${GITHUB_SHA::7}" >> $GITHUB_ENV
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ env.IMAGE_URL }}
+
+    - name: Update deploy.yaml with new image
+      run: |
+        IMAGE_TAG=${GITHUB_SHA::7}
+        sed -i "s|image: .*|image: $IMAGE_URL|g" deploy.yaml
+      env:
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        IMAGE_URL: ${{ env.IMAGE_URL }}
+
+    - name: Commit updated deploy.yaml
       run: |
         git config --global user.name "github-actions"
-        git config --global user.email "github-actions"
-        aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com 
-    - name: CI-build
-  
-      run: |
-        docker build -t 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }} .
-    
-    - name: CI-post_build
-      run: |
-        docker push 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }}
-        
-    - name: clone
-      run: |
-        git checkout dev
-    - name: update k8s deployment image
-      run: |
-        sed -i "s|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:.*|image: 586639730662.dkr.ecr.ap-northeast-2.amazonaws.com/user:${{ steps.date.outputs.date }}|g" deploy.yaml
+        git config --global user.email "github-actions@github.com"
         git add deploy.yaml
-        git commit -m "Update deployment image to ${{ steps.date.outputs.date }}"
-        git push origin dev
-      env: # 환경 변수
-          PAT: ${{ secrets.PAT }}
+        git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commits"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}
+
+    - name: Trigger Argo CD sync
+      run: |
+        argocd login argocd-server.argocd.svc.cluster.local --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure --grpc-web --plaintext
+        argocd app sync prod-user
